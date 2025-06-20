@@ -25,7 +25,7 @@ class Agent:
         response = self.model_with_tools.invoke(messages)
         return {"messages": [response]}
 
-    def call_tools(self, state: AgentState):
+    async def call_tools(self, state: AgentState):
         tool_calls = state["messages"][-1].tool_calls
         results = []
         for tc in tool_calls:
@@ -34,7 +34,7 @@ class Agent:
                 print(f"Bad tool name {tc['name']}")
                 result = "bad tool name, retry"
             else:
-                result = self.tools[tc['name']].invoke(tc['args'])
+                result = await self.tools[tc['name']].ainvoke(tc['args'])
             results.append(
                 ToolMessage(tool_call_id=tc['id'], name=tc['name'], content=str(result))
             )
