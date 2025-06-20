@@ -6,6 +6,7 @@ from langchain.chat_models import init_chat_model
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from langchain_mcp_adapters.tools import load_mcp_tools
+from langchain_mcp_adapters.client import MultiServerMCPClient
 import asyncio
 import nest_asyncio
 from typing import List
@@ -66,7 +67,34 @@ class MCP_ChatBot:
                 self.agent = Agent(model, self.tools, memory)
                 await self.chat_loop()
 
+    async def connect_to_multiple_servers_and_run(self):
+        client = MultiServerMCPClient(
+            {
+                "research": {
+                    "command": "uv",
+                    "args": ["run", "mcp_project/research_server.py"],
+                    "transport": "stdio",
+                },
+                "filesystem": {
+                    "command": "npx",
+                    "args": ["-y", "@modelcontextprotocol/server-filesystem", "."],
+                    "transport": "stdio",
+                },
+                "fetch": {
+                    "command": "uvx",
+                    "args": ["mcp-server-fetch"],
+                    "transport": "stdio",
+                },
+            }
+        )
+        self.tools = await client.get_tools()
+        print("\nConnected to server with tools:", [tool.name for tool in self.tools])
+
+        self.agent = Agent(model, self.tools, memory)
+        await self.chat_loop()
+
 
 if __name__ == "__main__":
     chatbot = MCP_ChatBot()
-    asyncio.run(chatbot.connect_to_server_and_run())
+    # asyncio.run(chatbot.connect_to_server_and_run())
+    asyncio.run(chatbot.connect_to_multiple_servers_and_run())
